@@ -442,193 +442,24 @@ body {
 }
 
 /* ============================================================
-   FLOW DIAGRAM
+   FLOW DIAGRAM (SVG)
    ============================================================ */
 .flow-diagram {
     margin-bottom: 60px;
     background: var(--bg-card);
     border: 1px solid var(--border);
     border-radius: 16px;
-    padding: 40px;
+    padding: 40px 24px;
     overflow-x: auto;
 }
-.flow-container {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    min-width: 600px;
-}
-.flow-row {
-    display: flex;
-    justify-content: center;
-}
-.flow-node {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    text-align: center;
-    font-size: 0.85rem;
-    font-weight: 600;
-    padding: 12px 24px;
-    border-radius: 8px;
-    border: 1px solid var(--border-light);
-    position: relative;
-    min-width: 140px;
-}
-.flow-detail {
-    display: block;
-    font-size: 0.7rem;
-    font-weight: 400;
-    color: var(--text-dim);
-    margin-top: 4px;
-    font-family: 'JetBrains Mono', monospace;
-}
-.flow-start {
-    background: var(--gold-glow);
-    color: var(--gold);
-    border-color: rgba(212, 168, 67, 0.3);
-    border-radius: 24px;
-}
-.flow-process {
-    background: rgba(52, 152, 219, 0.08);
-    color: var(--text-primary);
-    border-color: rgba(52, 152, 219, 0.2);
-}
-.flow-decision {
-    background: rgba(155, 89, 182, 0.08);
-    color: var(--state-teleport);
-    border-color: rgba(155, 89, 182, 0.3);
-    transform: rotate(0deg);
-    border-radius: 4px;
-    min-width: 100px;
-    padding: 10px 20px;
-}
-.flow-decision::before {
-    content: '';
-    position: absolute;
-    inset: -1px;
-    border: 1px solid rgba(155, 89, 182, 0.3);
-    border-radius: 4px;
-    transform: rotate(0deg);
-}
-.flow-action {
-    font-weight: 700;
-}
-.flow-observed {
-    background: rgba(230, 126, 34, 0.1);
-    color: var(--state-observed);
-    border-color: rgba(230, 126, 34, 0.3);
-}
-.flow-unobserved {
-    background: rgba(46, 204, 113, 0.08);
-    color: var(--state-unobserved);
-    border-color: rgba(46, 204, 113, 0.3);
-}
-.flow-teleport {
-    background: rgba(155, 89, 182, 0.1);
-    color: var(--state-teleport);
-    border-color: rgba(155, 89, 182, 0.3);
-}
-.flow-kill {
-    background: rgba(231, 76, 60, 0.1);
-    color: var(--state-attack);
-    border-color: rgba(231, 76, 60, 0.3);
-}
-.flow-arrow-down {
-    width: 2px;
-    height: 28px;
-    background: var(--border-light);
-    position: relative;
-    margin: 0 auto;
-}
-.flow-arrow-down::after {
-    content: '';
-    position: absolute;
-    bottom: 0;
-    left: 50%;
-    transform: translateX(-50%);
-    border-left: 5px solid transparent;
-    border-right: 5px solid transparent;
-    border-top: 6px solid var(--border-light);
-}
-.flow-branch {
-    display: flex;
-    gap: 80px;
-    justify-content: center;
-    margin-top: 8px;
-    position: relative;
-}
-.flow-branch::before {
-    content: '';
-    position: absolute;
-    top: 0;
-    left: calc(50% - 40px);
-    width: 80px;
-    height: 2px;
-    background: var(--border-light);
-}
-.flow-branch-left,
-.flow-branch-right {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    min-width: 160px;
-}
-.flow-branch-label {
-    font-size: 0.7rem;
-    font-weight: 700;
-    color: var(--gold);
-    letter-spacing: 1px;
-    margin-bottom: 4px;
-}
-.flow-sub-branch {
-    display: flex;
-    gap: 40px;
-    justify-content: center;
-    margin-top: 8px;
-    position: relative;
-}
-.flow-sub-branch::before {
-    content: '';
-    position: absolute;
-    top: 0;
-    left: calc(50% - 20px);
-    width: 40px;
-    height: 2px;
-    background: var(--border-light);
-}
-.flow-sub-left,
-.flow-sub-right {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    min-width: 80px;
-}
-.flow-footer {
-    margin-top: 32px;
-    padding-top: 20px;
-    border-top: 1px solid var(--border);
+.flow-svg-wrap {
     width: 100%;
+    min-width: 700px;
 }
-.flow-legend {
-    display: flex;
-    justify-content: center;
-    gap: 24px;
-    flex-wrap: wrap;
-}
-.flow-legend-item {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    font-size: 0.75rem;
-    color: var(--text-dim);
-    font-weight: 500;
-}
-.flow-dot {
-    width: 8px;
-    height: 8px;
-    border-radius: 50%;
+.flow-svg {
+    width: 100%;
+    height: auto;
+    display: block;
 }
 
 /* ============================================================
@@ -952,8 +783,7 @@ body {
     .overview-grid { grid-template-columns: 1fr; }
     .highlights-grid { grid-template-columns: 1fr; }
     .edge-cases-grid { grid-template-columns: 1fr; }
-    .flow-container { min-width: 400px; }
-    .flow-branch { gap: 40px; }
+    .flow-svg-wrap { min-width: 500px; }
     .hero { padding: 100px 20px 60px; }
     .hero-meta { gap: 24px; }
     .section { padding: 80px 0; }

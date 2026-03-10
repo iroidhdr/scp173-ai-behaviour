@@ -166,81 +166,233 @@
             <h2 class="section-title">Behaviour Tree Structure</h2>
             <p class="section-desc">The entire AI runs through a single Behaviour Tree with 5 priority-ordered branches. Higher-priority branches automatically abort lower ones. The system is built from 11 custom C++ classes &mdash; 3 services, 2 decorators, and 6 tasks.</p>
 
-            <!-- System Architecture Flowchart -->
+            <!-- System Architecture Flowchart (SVG) -->
             <div class="flow-diagram">
                 <h3 class="subsection-title" style="margin-top: 0;">System Flow</h3>
-                <div class="flow-container">
-                    <div class="flow-row">
-                        <div class="flow-node flow-start">Player Camera</div>
-                    </div>
-                    <div class="flow-arrow-down"></div>
-                    <div class="flow-row">
-                        <div class="flow-node flow-process">FOV + LOS Check<span class="flow-detail">BTService_UpdatePerception</span></div>
-                    </div>
-                    <div class="flow-arrow-down"></div>
-                    <div class="flow-row">
-                        <div class="flow-node flow-decision">Observed?</div>
-                    </div>
-                    <div class="flow-branch">
-                        <div class="flow-branch-left">
-                            <div class="flow-branch-label">YES</div>
-                            <div class="flow-arrow-down"></div>
-                            <div class="flow-node flow-action flow-observed">Freeze In Place<span class="flow-detail">Stop movement, clear focus, dust VFX</span></div>
-                        </div>
-                        <div class="flow-branch-right">
-                            <div class="flow-branch-label">NO</div>
-                            <div class="flow-arrow-down"></div>
-                            <div class="flow-node flow-process">Unobserved Timer<span class="flow-detail">Accumulates DeltaTime</span></div>
-                            <div class="flow-arrow-down"></div>
-                            <div class="flow-node flow-decision">Timeout?</div>
-                            <div class="flow-sub-branch">
-                                <div class="flow-sub-left">
-                                    <div class="flow-branch-label">YES</div>
-                                    <div class="flow-arrow-down"></div>
-                                    <div class="flow-node flow-action flow-teleport">Teleport Behind<span class="flow-detail">SetActorLocation + reaction window</span></div>
-                                    <div class="flow-arrow-down"></div>
-                                    <div class="flow-node flow-decision">Looked?</div>
-                                    <div class="flow-sub-branch">
-                                        <div class="flow-sub-left">
-                                            <div class="flow-branch-label" style="color: var(--state-observed);">YES</div>
-                                            <div class="flow-arrow-down"></div>
-                                            <div class="flow-node flow-action flow-observed" style="font-size: 0.75rem;">Freeze</div>
-                                        </div>
-                                        <div class="flow-sub-right">
-                                            <div class="flow-branch-label" style="color: var(--state-attack);">NO</div>
-                                            <div class="flow-arrow-down"></div>
-                                            <div class="flow-node flow-action flow-kill">Kill</div>
-                                        </div>
-                                    </div>
-                                </div>
-                                <div class="flow-sub-right">
-                                    <div class="flow-branch-label">NO</div>
-                                    <div class="flow-arrow-down"></div>
-                                    <div class="flow-node flow-decision" style="font-size: 0.75rem;">Flank?</div>
-                                    <div class="flow-sub-branch">
-                                        <div class="flow-sub-left">
-                                            <div class="flow-branch-label">YES</div>
-                                            <div class="flow-arrow-down"></div>
-                                            <div class="flow-node flow-action flow-unobserved" style="font-size: 0.75rem;">Flank</div>
-                                        </div>
-                                        <div class="flow-sub-right">
-                                            <div class="flow-branch-label">NO</div>
-                                            <div class="flow-arrow-down"></div>
-                                            <div class="flow-node flow-action flow-unobserved" style="font-size: 0.75rem;">Move</div>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="flow-footer">
-                        <div class="flow-legend">
-                            <span class="flow-legend-item"><span class="flow-dot" style="background: var(--state-observed);"></span> Observed</span>
-                            <span class="flow-legend-item"><span class="flow-dot" style="background: var(--state-unobserved);"></span> Unobserved</span>
-                            <span class="flow-legend-item"><span class="flow-dot" style="background: var(--state-teleport);"></span> Teleport</span>
-                            <span class="flow-legend-item"><span class="flow-dot" style="background: var(--state-attack);"></span> Kill</span>
-                        </div>
-                    </div>
+                <div class="flow-svg-wrap">
+                    <svg class="flow-svg" viewBox="0 0 1100 1080" xmlns="http://www.w3.org/2000/svg">
+                        <defs>
+                            <!-- Arrow markers -->
+                            <marker id="arrow-gold" markerWidth="10" markerHeight="8" refX="9" refY="4" orient="auto">
+                                <path d="M0,0 L10,4 L0,8 Z" fill="#d4a843"/>
+                            </marker>
+                            <marker id="arrow-orange" markerWidth="10" markerHeight="8" refX="9" refY="4" orient="auto">
+                                <path d="M0,0 L10,4 L0,8 Z" fill="#e67e22"/>
+                            </marker>
+                            <marker id="arrow-green" markerWidth="10" markerHeight="8" refX="9" refY="4" orient="auto">
+                                <path d="M0,0 L10,4 L0,8 Z" fill="#2ecc71"/>
+                            </marker>
+                            <marker id="arrow-purple" markerWidth="10" markerHeight="8" refX="9" refY="4" orient="auto">
+                                <path d="M0,0 L10,4 L0,8 Z" fill="#9b59b6"/>
+                            </marker>
+                            <marker id="arrow-red" markerWidth="10" markerHeight="8" refX="9" refY="4" orient="auto">
+                                <path d="M0,0 L10,4 L0,8 Z" fill="#e74c3c"/>
+                            </marker>
+                            <marker id="arrow-blue" markerWidth="10" markerHeight="8" refX="9" refY="4" orient="auto">
+                                <path d="M0,0 L10,4 L0,8 Z" fill="#3498db"/>
+                            </marker>
+                            <marker id="arrow-dim" markerWidth="10" markerHeight="8" refX="9" refY="4" orient="auto">
+                                <path d="M0,0 L10,4 L0,8 Z" fill="#555"/>
+                            </marker>
+                            <!-- Glow filter -->
+                            <filter id="glow">
+                                <feGaussianBlur stdDeviation="2" result="blur"/>
+                                <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
+                            </filter>
+                        </defs>
+
+                        <!-- ======== ROW 1: Player Camera (start) ======== -->
+                        <rect x="420" y="20" rx="24" ry="24" width="260" height="48" fill="rgba(212,168,67,0.12)" stroke="#d4a843" stroke-width="1.5"/>
+                        <text x="550" y="50" text-anchor="middle" fill="#d4a843" font-size="15" font-weight="700" font-family="Inter,sans-serif">Player Camera</text>
+
+                        <!-- Arrow down to Perception -->
+                        <line x1="550" y1="68" x2="550" y2="108" stroke="#d4a843" stroke-width="2.5" marker-end="url(#arrow-gold)"/>
+
+                        <!-- ======== ROW 2: Perception Service ======== -->
+                        <rect x="370" y="110" rx="10" ry="10" width="360" height="60" fill="rgba(52,152,219,0.08)" stroke="rgba(52,152,219,0.35)" stroke-width="1.5"/>
+                        <text x="550" y="137" text-anchor="middle" fill="#e8e8e8" font-size="15" font-weight="700" font-family="Inter,sans-serif">FOV + LOS Check &amp; Distance Calc</text>
+                        <text x="550" y="158" text-anchor="middle" fill="#666" font-size="11" font-family="JetBrains Mono,monospace">BTService_UpdatePerception</text>
+
+                        <!-- Arrow down to Attack Range check -->
+                        <line x1="550" y1="170" x2="550" y2="210" stroke="#d4a843" stroke-width="2.5" marker-end="url(#arrow-gold)"/>
+
+                        <!-- ======== ROW 3: In Attack Range? ======== -->
+                        <!-- Diamond shape -->
+                        <polygon points="550,212 650,250 550,288 450,250" fill="rgba(231,76,60,0.08)" stroke="rgba(231,76,60,0.4)" stroke-width="1.5"/>
+                        <text x="550" y="247" text-anchor="middle" fill="#e74c3c" font-size="13" font-weight="700" font-family="Inter,sans-serif">In Attack</text>
+                        <text x="550" y="263" text-anchor="middle" fill="#e74c3c" font-size="13" font-weight="700" font-family="Inter,sans-serif">Range?</text>
+
+                        <!-- YES arrow to Kill (left) -->
+                        <line x1="450" y1="250" x2="230" y2="250" stroke="#e74c3c" stroke-width="2.5" marker-end="url(#arrow-red)"/>
+                        <text x="360" y="242" text-anchor="middle" fill="#e74c3c" font-size="12" font-weight="700" font-family="Inter,sans-serif">YES</text>
+
+                        <!-- Kill Player box (left) -->
+                        <rect x="60" y="228" rx="10" ry="10" width="168" height="44" fill="rgba(231,76,60,0.12)" stroke="rgba(231,76,60,0.4)" stroke-width="1.5"/>
+                        <text x="144" y="246" text-anchor="middle" fill="#e74c3c" font-size="14" font-weight="800" font-family="Inter,sans-serif">KILL PLAYER</text>
+                        <text x="144" y="264" text-anchor="middle" fill="#666" font-size="10" font-family="JetBrains Mono,monospace">Branch 1 &middot; Highest</text>
+
+                        <!-- NO arrow down to Observed? -->
+                        <line x1="550" y1="288" x2="550" y2="340" stroke="#d4a843" stroke-width="2.5" marker-end="url(#arrow-gold)"/>
+                        <text x="564" y="320" fill="#999" font-size="12" font-weight="700" font-family="Inter,sans-serif">NO</text>
+
+                        <!-- ======== ROW 4: Observed? ======== -->
+                        <polygon points="550,342 650,380 550,418 450,380" fill="rgba(155,89,182,0.08)" stroke="rgba(155,89,182,0.4)" stroke-width="1.5"/>
+                        <text x="550" y="384" text-anchor="middle" fill="#9b59b6" font-size="14" font-weight="700" font-family="Inter,sans-serif">Observed?</text>
+
+                        <!-- YES arrow to Freeze (left) -->
+                        <line x1="450" y1="380" x2="300" y2="380" stroke="#e67e22" stroke-width="2.5" marker-end="url(#arrow-orange)"/>
+                        <text x="385" y="372" text-anchor="middle" fill="#e67e22" font-size="12" font-weight="700" font-family="Inter,sans-serif">YES</text>
+
+                        <!-- ======== Freeze In Place box (left) ======== -->
+                        <rect x="60" y="350" rx="10" ry="10" width="238" height="60" fill="rgba(230,126,34,0.1)" stroke="rgba(230,126,34,0.35)" stroke-width="1.5"/>
+                        <text x="179" y="372" text-anchor="middle" fill="#e67e22" font-size="14" font-weight="800" font-family="Inter,sans-serif">FREEZE IN PLACE</text>
+                        <text x="179" y="389" text-anchor="middle" fill="#999" font-size="10.5" font-family="Inter,sans-serif">StopMovement + ClearFocus</text>
+                        <text x="179" y="404" text-anchor="middle" fill="#666" font-size="10" font-family="JetBrains Mono,monospace">Branch 2 &middot; High</text>
+
+                        <!-- Arrow from Freeze down to FX Delay -->
+                        <line x1="179" y1="410" x2="179" y2="448" stroke="#e67e22" stroke-width="2" marker-end="url(#arrow-orange)"/>
+
+                        <!-- FX Delay box -->
+                        <rect x="100" y="450" rx="8" ry="8" width="158" height="44" fill="rgba(230,126,34,0.06)" stroke="rgba(230,126,34,0.2)" stroke-width="1" stroke-dasharray="5,3"/>
+                        <text x="179" y="469" text-anchor="middle" fill="#999" font-size="11" font-family="Inter,sans-serif">FX Delay (0.3s)</text>
+                        <text x="179" y="486" text-anchor="middle" fill="#666" font-size="10" font-family="JetBrains Mono,monospace">Dust VFX + BP_OnObserved</text>
+
+                        <!-- Loopback arrow from Freeze back to Perception (dashed) -->
+                        <path d="M60,380 L30,380 L30,140 L370,140" fill="none" stroke="#555" stroke-width="1.5" stroke-dasharray="6,4" marker-end="url(#arrow-dim)"/>
+                        <text x="36" y="265" fill="#555" font-size="10" font-family="Inter,sans-serif" transform="rotate(-90,36,265)">Player looks away</text>
+
+                        <!-- NO arrow to Unobserved Timer (right) -->
+                        <line x1="650" y1="380" x2="740" y2="380" stroke="#2ecc71" stroke-width="2.5" marker-end="url(#arrow-green)"/>
+                        <text x="690" y="372" text-anchor="middle" fill="#2ecc71" font-size="12" font-weight="700" font-family="Inter,sans-serif">NO</text>
+
+                        <!-- ======== Unobserved Timer box (right) ======== -->
+                        <rect x="742" y="354" rx="10" ry="10" width="280" height="52" fill="rgba(52,152,219,0.08)" stroke="rgba(52,152,219,0.25)" stroke-width="1.5"/>
+                        <text x="882" y="377" text-anchor="middle" fill="#e8e8e8" font-size="13" font-weight="600" font-family="Inter,sans-serif">Accumulate Unobserved Time</text>
+                        <text x="882" y="396" text-anchor="middle" fill="#666" font-size="10" font-family="JetBrains Mono,monospace">UnobservedTime += DeltaTime</text>
+
+                        <!-- Arrow down to Teleport Timeout check -->
+                        <line x1="882" y1="406" x2="882" y2="450" stroke="#d4a843" stroke-width="2.5" marker-end="url(#arrow-gold)"/>
+
+                        <!-- ======== Teleport Timeout? ======== -->
+                        <polygon points="882,452 972,486 882,520 792,486" fill="rgba(155,89,182,0.08)" stroke="rgba(155,89,182,0.35)" stroke-width="1.5"/>
+                        <text x="882" y="483" text-anchor="middle" fill="#9b59b6" font-size="12" font-weight="700" font-family="Inter,sans-serif">Timeout</text>
+                        <text x="882" y="498" text-anchor="middle" fill="#9b59b6" font-size="12" font-weight="700" font-family="Inter,sans-serif">Reached?</text>
+
+                        <!-- YES arrow down to Teleport -->
+                        <line x1="882" y1="520" x2="882" y2="568" stroke="#9b59b6" stroke-width="2.5" marker-end="url(#arrow-purple)"/>
+                        <text x="896" y="548" fill="#9b59b6" font-size="12" font-weight="700" font-family="Inter,sans-serif">YES</text>
+
+                        <!-- NO arrow left to Flank Decision -->
+                        <line x1="792" y1="486" x2="668" y2="486" stroke="#2ecc71" stroke-width="2.5" marker-end="url(#arrow-green)"/>
+                        <text x="738" y="478" text-anchor="middle" fill="#2ecc71" font-size="12" font-weight="700" font-family="Inter,sans-serif">NO</text>
+
+                        <!-- ======== Flank Decision (center-left) ======== -->
+                        <polygon points="600,486 660,514 600,542 540,514" fill="rgba(52,152,219,0.08)" stroke="rgba(52,152,219,0.3)" stroke-width="1.5"/>
+                        <text x="600" y="518" text-anchor="middle" fill="#3498db" font-size="12" font-weight="700" font-family="Inter,sans-serif">Flank?</text>
+
+                        <!-- YES arrow down to Flank -->
+                        <line x1="600" y1="542" x2="600" y2="588" stroke="#3498db" stroke-width="2.5" marker-end="url(#arrow-blue)"/>
+                        <text x="614" y="570" fill="#3498db" font-size="11" font-weight="700" font-family="Inter,sans-serif">YES</text>
+
+                        <!-- Flank Reposition box -->
+                        <rect x="500" y="590" rx="10" ry="10" width="200" height="56" fill="rgba(46,204,113,0.08)" stroke="rgba(46,204,113,0.3)" stroke-width="1.5"/>
+                        <text x="600" y="613" text-anchor="middle" fill="#2ecc71" font-size="13" font-weight="700" font-family="Inter,sans-serif">FLANK REPOSITION</text>
+                        <text x="600" y="630" text-anchor="middle" fill="#999" font-size="10" font-family="Inter,sans-serif">MoveToLocation(FlankTarget)</text>
+                        <text x="600" y="643" text-anchor="middle" fill="#666" font-size="10" font-family="JetBrains Mono,monospace">Branch 4 &middot; Low</text>
+
+                        <!-- NO arrow left to Move -->
+                        <line x1="540" y1="514" x2="438" y2="514" stroke="#2ecc71" stroke-width="2.5" marker-end="url(#arrow-green)"/>
+                        <text x="496" y="506" text-anchor="middle" fill="#7f8c8d" font-size="11" font-weight="700" font-family="Inter,sans-serif">NO</text>
+
+                        <!-- Move Toward Player box -->
+                        <rect x="318" y="490" rx="10" ry="10" width="118" height="48" fill="rgba(46,204,113,0.08)" stroke="rgba(46,204,113,0.25)" stroke-width="1.5"/>
+                        <text x="377" y="510" text-anchor="middle" fill="#2ecc71" font-size="12" font-weight="700" font-family="Inter,sans-serif">MOVE</text>
+                        <text x="377" y="526" text-anchor="middle" fill="#999" font-size="9.5" font-family="Inter,sans-serif">MoveToActor(Player)</text>
+                        <text x="377" y="537" text-anchor="middle" fill="#666" font-size="9" font-family="JetBrains Mono,monospace">Branch 5</text>
+
+                        <!-- Loopback from Move/Flank back to Perception -->
+                        <path d="M377,538 L377,560 L1060,560 L1060,140 L730,140" fill="none" stroke="#555" stroke-width="1.5" stroke-dasharray="6,4" marker-end="url(#arrow-dim)"/>
+                        <text x="1066" y="360" fill="#555" font-size="10" font-family="Inter,sans-serif" transform="rotate(90,1066,360)">Continuous re-evaluation</text>
+
+                        <!-- ======== TELEPORT SECTION ======== -->
+                        <rect x="772" y="570" rx="10" ry="10" width="220" height="72" fill="rgba(155,89,182,0.1)" stroke="rgba(155,89,182,0.35)" stroke-width="1.5"/>
+                        <text x="882" y="592" text-anchor="middle" fill="#9b59b6" font-size="14" font-weight="800" font-family="Inter,sans-serif">TELEPORT BEHIND</text>
+                        <text x="882" y="610" text-anchor="middle" fill="#999" font-size="10.5" font-family="Inter,sans-serif">SetActorLocation + CameraShake</text>
+                        <text x="882" y="625" text-anchor="middle" fill="#999" font-size="10.5" font-family="Inter,sans-serif">Sound Cue + SetFocus</text>
+                        <text x="882" y="638" text-anchor="middle" fill="#666" font-size="10" font-family="JetBrains Mono,monospace">Branch 3 &middot; Medium</text>
+
+                        <!-- Arrow down to Reaction Window -->
+                        <line x1="882" y1="642" x2="882" y2="686" stroke="#9b59b6" stroke-width="2.5" marker-end="url(#arrow-purple)"/>
+
+                        <!-- Reaction Window box -->
+                        <rect x="772" y="688" rx="10" ry="10" width="220" height="52" fill="rgba(155,89,182,0.06)" stroke="rgba(155,89,182,0.25)" stroke-width="1" stroke-dasharray="5,3"/>
+                        <text x="882" y="710" text-anchor="middle" fill="#9b59b6" font-size="12" font-weight="600" font-family="Inter,sans-serif">Reaction Window Timer</text>
+                        <text x="882" y="728" text-anchor="middle" fill="#666" font-size="10" font-family="JetBrains Mono,monospace">BTService_ReactionWindow</text>
+
+                        <!-- Arrow down to Looked? -->
+                        <line x1="882" y1="740" x2="882" y2="780" stroke="#9b59b6" stroke-width="2.5" marker-end="url(#arrow-purple)"/>
+
+                        <!-- Looked? diamond -->
+                        <polygon points="882,782 962,812 882,842 802,812" fill="rgba(155,89,182,0.08)" stroke="rgba(155,89,182,0.35)" stroke-width="1.5"/>
+                        <text x="882" y="808" text-anchor="middle" fill="#9b59b6" font-size="12" font-weight="700" font-family="Inter,sans-serif">Player</text>
+                        <text x="882" y="823" text-anchor="middle" fill="#9b59b6" font-size="12" font-weight="700" font-family="Inter,sans-serif">Looked?</text>
+
+                        <!-- YES arrow left to Freeze result -->
+                        <line x1="802" y1="812" x2="710" y2="812" stroke="#e67e22" stroke-width="2.5" marker-end="url(#arrow-orange)"/>
+                        <text x="764" y="804" text-anchor="middle" fill="#e67e22" font-size="12" font-weight="700" font-family="Inter,sans-serif">YES</text>
+
+                        <!-- Freeze (reaction survived) -->
+                        <rect x="590" y="790" rx="10" ry="10" width="118" height="44" fill="rgba(230,126,34,0.1)" stroke="rgba(230,126,34,0.3)" stroke-width="1.5"/>
+                        <text x="649" y="809" text-anchor="middle" fill="#e67e22" font-size="13" font-weight="700" font-family="Inter,sans-serif">FREEZE</text>
+                        <text x="649" y="826" text-anchor="middle" fill="#999" font-size="10" font-family="Inter,sans-serif">Cancel reaction timer</text>
+
+                        <!-- NO arrow right to Kill result -->
+                        <line x1="962" y1="812" x2="1000" y2="812" stroke="#e74c3c" stroke-width="2.5" marker-end="url(#arrow-red)"/>
+                        <text x="982" y="804" text-anchor="middle" fill="#e74c3c" font-size="12" font-weight="700" font-family="Inter,sans-serif">NO</text>
+
+                        <!-- Kill (reaction failed) -->
+                        <rect x="1002" y="790" rx="10" ry="10" width="80" height="44" fill="rgba(231,76,60,0.12)" stroke="rgba(231,76,60,0.4)" stroke-width="1.5"/>
+                        <text x="1042" y="816" text-anchor="middle" fill="#e74c3c" font-size="14" font-weight="800" font-family="Inter,sans-serif">KILL</text>
+
+                        <!-- ======== SERVICE BADGES (right side) ======== -->
+                        <!-- Services annotation -->
+                        <rect x="60" y="128" rx="6" ry="6" width="180" height="30" fill="rgba(52,152,219,0.08)" stroke="rgba(52,152,219,0.2)" stroke-width="1"/>
+                        <text x="150" y="148" text-anchor="middle" fill="#3498db" font-size="10" font-weight="600" font-family="JetBrains Mono,monospace">Runs every BT service tick</text>
+
+                        <!-- ======== LOOPBACK from Freeze reaction to top ======== -->
+                        <path d="M649,834 L649,860 L30,860 L30,140" fill="none" stroke="#555" stroke-width="1.5" stroke-dasharray="6,4"/>
+
+                        <!-- ======== LEGEND ======== -->
+                        <line x1="60" y1="920" x2="1040" y2="920" stroke="#222" stroke-width="1"/>
+
+                        <!-- Branch priority labels -->
+                        <text x="550" y="956" text-anchor="middle" fill="#666" font-size="12" font-weight="600" font-family="Inter,sans-serif">BRANCH PRIORITY (highest aborts lowest)</text>
+
+                        <circle cx="200" cy="990" r="8" fill="rgba(231,76,60,0.2)" stroke="#e74c3c" stroke-width="1.5"/>
+                        <text x="216" y="995" fill="#e74c3c" font-size="12" font-weight="600" font-family="Inter,sans-serif">1 &mdash; Kill</text>
+
+                        <circle cx="360" cy="990" r="8" fill="rgba(230,126,34,0.2)" stroke="#e67e22" stroke-width="1.5"/>
+                        <text x="376" y="995" fill="#e67e22" font-size="12" font-weight="600" font-family="Inter,sans-serif">2 &mdash; Freeze</text>
+
+                        <circle cx="540" cy="990" r="8" fill="rgba(155,89,182,0.2)" stroke="#9b59b6" stroke-width="1.5"/>
+                        <text x="556" y="995" fill="#9b59b6" font-size="12" font-weight="600" font-family="Inter,sans-serif">3 &mdash; Teleport</text>
+
+                        <circle cx="720" cy="990" r="8" fill="rgba(52,152,219,0.2)" stroke="#3498db" stroke-width="1.5"/>
+                        <text x="736" y="995" fill="#3498db" font-size="12" font-weight="600" font-family="Inter,sans-serif">4 &mdash; Flank</text>
+
+                        <circle cx="880" cy="990" r="8" fill="rgba(46,204,113,0.2)" stroke="#2ecc71" stroke-width="1.5"/>
+                        <text x="896" y="995" fill="#2ecc71" font-size="12" font-weight="600" font-family="Inter,sans-serif">5 &mdash; Move</text>
+
+                        <!-- Connector legend -->
+                        <line x1="180" y1="1030" x2="220" y2="1030" stroke="#d4a843" stroke-width="2.5" marker-end="url(#arrow-gold)"/>
+                        <text x="232" y="1035" fill="#999" font-size="11" font-family="Inter,sans-serif">Decision flow</text>
+
+                        <line x1="420" y1="1030" x2="460" y2="1030" stroke="#555" stroke-width="1.5" stroke-dasharray="6,4" marker-end="url(#arrow-dim)"/>
+                        <text x="472" y="1035" fill="#999" font-size="11" font-family="Inter,sans-serif">Re-evaluation loop</text>
+
+                        <rect x="680" y="1022" rx="4" ry="4" width="40" height="16" fill="none" stroke="rgba(155,89,182,0.25)" stroke-width="1" stroke-dasharray="5,3"/>
+                        <text x="732" y="1035" fill="#999" font-size="11" font-family="Inter,sans-serif">Timed process</text>
+                    </svg>
                 </div>
             </div>
 
