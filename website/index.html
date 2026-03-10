@@ -1,0 +1,758 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SCP-173 AI Behaviour - Assessment Submission</title>
+    <link rel="stylesheet" href="style.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+</head>
+<body>
+
+    <!-- ======================== NAVIGATION ======================== -->
+    <nav class="navbar" id="navbar">
+        <div class="nav-inner">
+            <a href="#hero" class="nav-logo">SCP-173</a>
+            <ul class="nav-links">
+                <li><a href="#overview">Overview</a></li>
+                <li><a href="#architecture">Architecture</a></li>
+                <li><a href="#core-behaviour">Core</a></li>
+                <li><a href="#line-of-sight">LOS</a></li>
+                <li><a href="#teleport">Teleport</a></li>
+                <li><a href="#kill">Kill</a></li>
+                <li><a href="#vfx">VFX</a></li>
+                <li><a href="#camera">Camera</a></li>
+                <li><a href="#audio">Audio</a></li>
+                <li><a href="#flanking">Flanking</a></li>
+                <li><a href="#states">States</a></li>
+            </ul>
+        </div>
+    </nav>
+
+    <!-- ======================== HERO ======================== -->
+    <section class="hero" id="hero">
+        <div class="hero-bg-overlay"></div>
+        <div class="hero-content">
+            <p class="hero-label">Zatun Game Test &mdash; Assessment Submission</p>
+            <h1 class="hero-title">SCP-173<br><span class="gold">AI Behaviour System</span></h1>
+            <p class="hero-subtitle">A fully C++ Behaviour Tree driven AI for Unreal Engine 5 that implements observation-dependent movement, teleport failsafe, kill mechanics, spatial audio, particle VFX, proximity camera effects, and unpredictable flanking repositioning.</p>
+            <div class="hero-meta">
+                <div class="meta-item">
+                    <span class="meta-label">Candidate</span>
+                    <span class="meta-value">Abdus Shafiq</span>
+                </div>
+                <div class="meta-item">
+                    <span class="meta-label">Engine</span>
+                    <span class="meta-value">Unreal Engine 5.7</span>
+                </div>
+                <div class="meta-item">
+                    <span class="meta-label">Language</span>
+                    <span class="meta-value">100% C++</span>
+                </div>
+                <div class="meta-item">
+                    <span class="meta-label">AI Framework</span>
+                    <span class="meta-value">Behaviour Tree</span>
+                </div>
+            </div>
+            <a href="#overview" class="hero-cta">Explore the Implementation</a>
+        </div>
+        <div class="scroll-indicator">
+            <div class="scroll-line"></div>
+        </div>
+    </section>
+
+    <!-- ======================== OVERVIEW ======================== -->
+    <section class="section" id="overview">
+        <div class="container">
+            <p class="section-label">Project Overview</p>
+            <h2 class="section-title">Design Philosophy</h2>
+            <div class="overview-grid">
+                <div class="overview-card">
+                    <div class="card-icon">01</div>
+                    <h3>Zero Tick Dependency</h3>
+                    <p>The entire AI runs on UE5's Behaviour Tree framework with services and decorators handling perception. The SCP-173 Character has <span class="mono">PrimaryActorTick</span> disabled &mdash; no Actor Tick overhead at all. All logic executes through the BT's own update cycle.</p>
+                </div>
+                <div class="overview-card">
+                    <div class="card-icon">02</div>
+                    <h3>NavMesh Pathfinding</h3>
+                    <p>Movement uses <span class="mono">AAIController::MoveToActor</span> and <span class="mono">MoveToLocation</span> rather than manual <span class="mono">SetActorLocation</span>. This gives proper slope traversal, stair climbing, and obstacle avoidance through Unreal's built-in navigation system.</p>
+                </div>
+                <div class="overview-card">
+                    <div class="card-icon">03</div>
+                    <h3>Reverse Perception</h3>
+                    <p>Unlike standard AI perception (where AI detects targets), SCP-173 needs the reverse: can the <em>player's camera</em> see <em>SCP-173</em>? A custom system was built instead of using <span class="mono">UAIPerceptionComponent</span> because the built-in component traces from AI eyes outward &mdash; the wrong direction entirely.</p>
+                </div>
+                <div class="overview-card">
+                    <div class="card-icon">04</div>
+                    <h3>Teleport via SetActorLocation</h3>
+                    <p>The teleport mechanic deliberately uses <span class="mono">SetActorLocation</span> with <span class="mono">ETeleportType::TeleportPhysics</span> instead of NavMesh movement. This ensures SCP-173 can teleport to any valid location regardless of NavMesh coverage &mdash; a critical failsafe that must work everywhere.</p>
+                </div>
+                <div class="overview-card">
+                    <div class="card-icon">05</div>
+                    <h3>Designer-Friendly Configurables</h3>
+                    <p>Every gameplay-critical value is exposed as an <span class="mono">EditAnywhere UPROPERTY</span> with appropriate clamp ranges and unit labels. Designers can tune speeds, distances, timings, and probabilities directly in the Blueprint editor without touching C++.</p>
+                </div>
+                <div class="overview-card">
+                    <div class="card-icon">06</div>
+                    <h3>Modular BT Nodes</h3>
+                    <p>11 custom C++ classes (3 services, 2 decorators, 6 tasks) each handle a single responsibility. The movement tasks share a common abstract base class. Nodes are reusable and independently testable.</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- ======================== ARCHITECTURE ======================== -->
+    <section class="section section-dark" id="architecture">
+        <div class="container">
+            <p class="section-label">System Architecture</p>
+            <h2 class="section-title">Behaviour Tree Structure</h2>
+            <p class="section-desc">The entire AI runs through a single Behaviour Tree with 5 priority-ordered branches. Higher-priority branches automatically abort lower ones. The system is built from 11 custom C++ classes &mdash; 3 services, 2 decorators, and 6 tasks.</p>
+
+            <div class="arch-tree">
+                <div class="arch-branch">
+                    <div class="branch-header priority-1">
+                        <span class="branch-num">Branch 1</span>
+                        <span class="branch-priority">Highest</span>
+                    </div>
+                    <h3>Kill Player</h3>
+                    <p>Triggers instantly when within attack distance.</p>
+                </div>
+                <div class="arch-branch">
+                    <div class="branch-header priority-2">
+                        <span class="branch-num">Branch 2</span>
+                        <span class="branch-priority">High</span>
+                    </div>
+                    <h3>Freeze In Place</h3>
+                    <p>Locks SCP-173 when observed. Stops movement, clears focus, spawns dust VFX after a configurable delay.</p>
+                </div>
+                <div class="arch-branch">
+                    <div class="branch-header priority-3">
+                        <span class="branch-num">Branch 3</span>
+                        <span class="branch-priority">Medium</span>
+                    </div>
+                    <h3>Teleport Behind Player</h3>
+                    <p>Failsafe repositioning when unobserved too long. Uses <span class="mono">SetActorLocation</span> (works without NavMesh).</p>
+                </div>
+                <div class="arch-branch">
+                    <div class="branch-header priority-4">
+                        <span class="branch-num">Branch 4</span>
+                        <span class="branch-priority">Low</span>
+                    </div>
+                    <h3>Flank Reposition</h3>
+                    <p>Probability-based lateral movement to create unpredictable encounters.</p>
+                </div>
+                <div class="arch-branch">
+                    <div class="branch-header priority-5">
+                        <span class="branch-num">Branch 5</span>
+                        <span class="branch-priority">Fallback</span>
+                    </div>
+                    <h3>Move Toward Player</h3>
+                    <p>Default direct approach via NavMesh pathfinding.</p>
+                </div>
+            </div>
+
+            <div class="arch-services">
+                <h3 class="subsection-title">Services &amp; Shared Infrastructure</h3>
+                <div class="service-grid">
+                    <div class="service-card">
+                        <h4>Perception Service</h4>
+                        <p>Camera FOV + LOS checks. Updates all Blackboard keys: observation state, distance, unobserved timer, attack range, and teleport readiness.</p>
+                    </div>
+                    <div class="service-card">
+                        <h4>Reaction Window Service</h4>
+                        <p>Counts down the post-teleport timer. Triggers kill if the player doesn't look in time.</p>
+                    </div>
+                    <div class="service-card">
+                        <h4>Movement Base Class</h4>
+                        <p>Shared abstract base for both movement tasks. Handles focus management, path status monitoring, and movement sound lifecycle. Subclasses only override the move request.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- ======================== CORE BEHAVIOUR ======================== -->
+    <section class="section" id="core-behaviour">
+        <div class="container">
+            <p class="section-label">Core Behaviour</p>
+            <h2 class="section-title">Freeze When Observed, Move When Unseen</h2>
+            <p class="section-desc">The fundamental SCP-173 mechanic: complete stillness under observation, rapid movement the instant line of sight breaks. The transition is instantaneous &mdash; there is no blend or interpolation delay.</p>
+
+            <div class="video-showcase">
+                <div class="video-card">
+                    <div class="video-wrapper">
+                        <video controls preload="metadata">
+                            <source src="../Clip1.mp4" type="video/mp4">
+                        </video>
+                    </div>
+                    <div class="video-info">
+                        <h3>Clip 1 &mdash; Core Freeze/Move Loop</h3>
+                        <p>Demonstrates the fundamental observation cycle. Looking directly at SCP-173 keeps it frozen in place. Turning away allows it to rapidly close the gap using NavMesh pathfinding. Snapping back reveals it has repositioned &mdash; now frozen again in its new position. The movement speed of 2000 cm/s gives the impression of sudden repositioning rather than gradual walking.</p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="how-it-works">
+                <h3 class="subsection-title">How It Works</h3>
+                <div class="step-grid">
+                    <div class="step">
+                        <div class="step-num">1</div>
+                        <p><strong>BTDecorator_IsObserved</strong> runs a per-frame check using a dot-product FOV test combined with a line trace from the player's camera to SCP-173's location.</p>
+                    </div>
+                    <div class="step">
+                        <div class="step-num">2</div>
+                        <p>If observed, the decorator activates <strong>Branch 2 (Freeze)</strong> which aborts any active movement tasks via <span class="mono">FlowAbortMode::Both</span>.</p>
+                    </div>
+                    <div class="step">
+                        <div class="step-num">3</div>
+                        <p><strong>BTTask_FreezeInPlace</strong> immediately stops NavMesh pathfinding, clears the AI focus, and after a configurable <span class="mono">FXDelay</span> triggers the Observed state (spawning dust VFX).</p>
+                    </div>
+                    <div class="step">
+                        <div class="step-num">4</div>
+                        <p>When the player looks away, the decorator deactivates, and <strong>Branch 5 (Move)</strong> resumes &mdash; calling <span class="mono">MoveToActor(Player)</span> with NavMesh pathfinding.</p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="config-table-wrap">
+                <h3 class="subsection-title">Configurable Parameters</h3>
+                <table class="config-table">
+                    <thead>
+                        <tr><th>Parameter</th><th>Location</th><th>Default</th><th>Range</th><th>Purpose</th></tr>
+                    </thead>
+                    <tbody>
+                        <tr><td><span class="mono">MoveSpeed</span></td><td>SCP173Character</td><td>2000 cm/s</td><td>0 &ndash; 5000</td><td>How fast SCP-173 moves when unobserved. Synced to CMC MaxWalkSpeed at runtime.</td></tr>
+                        <tr><td><span class="mono">FXDelay</span></td><td>SCP173Character</td><td>0.3s</td><td>0 &ndash; 3</td><td>Delay before dust VFX spawns after the player sees SCP-173. Creates a "just caught it" feel.</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </section>
+
+    <!-- ======================== LINE OF SIGHT ======================== -->
+    <section class="section section-dark" id="line-of-sight">
+        <div class="container">
+            <p class="section-label">Line-of-Sight Detection</p>
+            <h2 class="section-title">Camera-Based Observation System</h2>
+            <p class="section-desc">Observation is determined from the <em>player's camera</em>, not the AI. This is the reverse of standard AI perception &mdash; the question is "can the player see SCP-173?" not "can the AI see the player." This is why we built a custom system rather than using Unreal's <span class="mono">UAIPerceptionComponent</span>.</p>
+
+            <div class="video-showcase">
+                <div class="video-card">
+                    <div class="video-wrapper">
+                        <video controls preload="metadata">
+                            <source src="../Clip2.mp4" type="video/mp4">
+                        </video>
+                    </div>
+                    <div class="video-info">
+                        <h3>Clip 2 &mdash; LOS Obstruction</h3>
+                        <p>Shows SCP-173 moving when a wall or obstacle blocks the player's line of sight. Even though the player is facing SCP-173's general direction, the raycast hits the obstacle first, confirming SCP-173 as unobserved. Sidestepping to regain clear sight freezes it again instantly.</p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="how-it-works">
+                <h3 class="subsection-title">Detection Logic</h3>
+                <p>The system uses a two-step validation in <span class="mono">SCP173FunctionLibrary::IsActorObserved</span>:</p>
+                <div class="step-grid">
+                    <div class="step">
+                        <div class="step-num">1</div>
+                        <p><strong>FOV Check:</strong> Calculate the dot product between the camera's forward vector and the direction to SCP-173. If the angle exceeds <span class="mono">PlayerFOVHalfAngle</span>, SCP-173 is outside the player's field of view and considered unobserved.</p>
+                    </div>
+                    <div class="step">
+                        <div class="step-num">2</div>
+                        <p><strong>LOS Raycast:</strong> Fire a <span class="mono">LineTraceSingleByChannel</span> from the camera location to SCP-173's location. If the trace hits any obstacle before reaching SCP-173, it is considered unobserved (occluded). Only a direct, unobstructed hit confirms observation.</p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="rationale-box">
+                <h4>Why Not UAIPerceptionComponent?</h4>
+                <ul class="feature-list">
+                    <li><strong>Wrong direction</strong> &mdash; Built-in perception traces from the AI's eyes outward. SCP-173 needs the reverse: trace from the player's camera to the AI.</li>
+                    <li><strong>Latency</strong> &mdash; The perception component fires stimulus events asynchronously with its own tick interval. SCP-173 requires per-frame accuracy &mdash; a single frame of delay means it moves while being watched.</li>
+                    <li><strong>Overhead</strong> &mdash; The perception system supports multiple senses (sight, hearing, damage, touch), team affiliation, and stimulus aging. SCP-173 needs exactly one check. Custom is lighter and more precise.</li>
+                </ul>
+            </div>
+
+            <div class="config-table-wrap">
+                <h3 class="subsection-title">Configurable Parameters</h3>
+                <table class="config-table">
+                    <thead>
+                        <tr><th>Parameter</th><th>Location</th><th>Default</th><th>Range</th><th>Purpose</th></tr>
+                    </thead>
+                    <tbody>
+                        <tr><td><span class="mono">PlayerFOVHalfAngle</span></td><td>BTService_SCP173Perception</td><td>45&deg;</td><td>0 &ndash; 90</td><td>Half-angle of the player's field of view for observation checks.</td></tr>
+                        <tr><td><span class="mono">LOSTraceChannel</span></td><td>BTService_SCP173Perception</td><td>ECC_Visibility</td><td>&mdash;</td><td>Collision channel used for the line-of-sight raycast.</td></tr>
+                        <tr><td><span class="mono">PlayerFOVHalfAngle</span></td><td>BTDecorator_IsObserved</td><td>45&deg;</td><td>0 &ndash; 90</td><td>Duplicate on the decorator for independent per-frame checking.</td></tr>
+                        <tr><td><span class="mono">LOSTraceChannel</span></td><td>BTDecorator_IsObserved</td><td>ECC_Visibility</td><td>&mdash;</td><td>Collision channel for the decorator's own LOS trace.</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </section>
+
+    <!-- ======================== TELEPORT ======================== -->
+    <section class="section" id="teleport">
+        <div class="container">
+            <p class="section-label">Teleport Mechanic</p>
+            <h2 class="section-title">Failsafe Repositioning</h2>
+            <p class="section-desc">Teleportation is <em>not</em> part of SCP-173's normal movement. It is a failsafe that triggers only when SCP-173 has been unobserved for an extended duration or cannot find a valid path. This ensures the player can never permanently evade SCP-173 by exploiting geometry.</p>
+
+            <div class="video-showcase dual">
+                <div class="video-card">
+                    <div class="video-wrapper">
+                        <video controls preload="metadata">
+                            <source src="../Clip3.mp4" type="video/mp4">
+                        </video>
+                    </div>
+                    <div class="video-info">
+                        <h3>Clip 3 &mdash; Teleport + Survival</h3>
+                        <p>The player looks away for the teleport timeout duration. SCP-173 teleports behind the player (audio cue + camera shake alert). The player quickly turns around and spots SCP-173 within the reaction window, freezing it and surviving.</p>
+                        <p class="note">Teleport timeout set to 4s for demonstration.</p>
+                    </div>
+                </div>
+                <div class="video-card">
+                    <div class="video-wrapper">
+                        <video controls preload="metadata">
+                            <source src="../Clip4.mp4" type="video/mp4">
+                        </video>
+                    </div>
+                    <div class="video-info">
+                        <h3>Clip 4 &mdash; Teleport Kill</h3>
+                        <p>Same teleport trigger, but this time the player fails to turn around within the reaction window. The timer expires and SCP-173 executes the kill sequence. The audio cue and camera shake serve as the player's only warning.</p>
+                        <p class="note">Teleport timeout set to 4s for demonstration.</p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="how-it-works">
+                <h3 class="subsection-title">Teleport Location Selection</h3>
+                <p><span class="mono">SCP173FunctionLibrary::FindTeleportLocation</span> uses a multi-candidate approach:</p>
+                <div class="step-grid">
+                    <div class="step">
+                        <div class="step-num">1</div>
+                        <p>Generate candidate positions behind and around the player at <span class="mono">TeleportDistanceBehindPlayer</span> distance.</p>
+                    </div>
+                    <div class="step">
+                        <div class="step-num">2</div>
+                        <p>Validate each candidate is <strong>not</strong> within the player's FOV using <span class="mono">IsLocationInFOV</span>.</p>
+                    </div>
+                    <div class="step">
+                        <div class="step-num">3</div>
+                        <p>Run a LOS trace from the player to each candidate &mdash; prefer positions with no direct line of sight.</p>
+                    </div>
+                    <div class="step">
+                        <div class="step-num">4</div>
+                        <p>Execute teleport via <span class="mono">SetActorLocation</span> with <span class="mono">ETeleportType::TeleportPhysics</span> &mdash; works regardless of NavMesh coverage.</p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="config-table-wrap">
+                <h3 class="subsection-title">Configurable Parameters</h3>
+                <table class="config-table">
+                    <thead>
+                        <tr><th>Parameter</th><th>Location</th><th>Default</th><th>Range</th><th>Purpose</th></tr>
+                    </thead>
+                    <tbody>
+                        <tr><td><span class="mono">TeleportTimeout</span></td><td>SCP173Character</td><td>8s</td><td>0 &ndash; 30</td><td>How long SCP-173 must be unobserved before the teleport failsafe triggers.</td></tr>
+                        <tr><td><span class="mono">TeleportDistanceBehindPlayer</span></td><td>SCP173Character</td><td>300 cm</td><td>0 &ndash; 1000</td><td>How far behind the player the teleport destination is placed.</td></tr>
+                        <tr><td><span class="mono">ReactionWindowTime</span></td><td>SCP173Character</td><td>2.5s</td><td>0 &ndash; 10</td><td>How long the player has to turn and look at SCP-173 after a teleport before being killed.</td></tr>
+                        <tr><td><span class="mono">PlayerFOVHalfAngle</span></td><td>BTTask_TeleportBehindPlayer</td><td>45&deg;</td><td>0 &ndash; 90</td><td>FOV half-angle for validating teleport location is outside player's vision.</td></tr>
+                        <tr><td><span class="mono">LOSTraceChannel</span></td><td>BTTask_TeleportBehindPlayer</td><td>ECC_Visibility</td><td>&mdash;</td><td>Collision channel for teleport location LOS validation.</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </section>
+
+    <!-- ======================== KILL ======================== -->
+    <section class="section section-dark" id="kill">
+        <div class="container">
+            <p class="section-label">Player Kill Condition</p>
+            <h2 class="section-title">Two Paths to Death</h2>
+            <p class="section-desc">SCP-173 can kill through two independent mechanisms: proximity-based direct attack and post-teleport reaction timeout. Both converge on the same <span class="mono">TriggerKill()</span> function which broadcasts the kill event and notifies Blueprint.</p>
+
+            <div class="video-showcase">
+                <div class="video-card">
+                    <div class="video-wrapper">
+                        <video controls preload="metadata">
+                            <source src="../Clip5.mp4" type="video/mp4">
+                        </video>
+                    </div>
+                    <div class="video-info">
+                        <h3>Clip 5 &mdash; Direct Attack Kill</h3>
+                        <p>SCP-173 approaches the player through normal unobserved movement. Once it enters the <span class="mono">AttackDistance</span> radius, the highest-priority BT branch fires immediately, triggering the kill sequence. At 2000 cm/s movement speed, this happens rapidly once the player loses line of sight at close range.</p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="kill-paths">
+                <div class="kill-path">
+                    <h4>Path A: Direct Attack</h4>
+                    <p><span class="mono">BTService_SCP173Perception</span> continuously measures distance. When distance falls below <span class="mono">AttackDistance</span>, it sets <span class="mono">bInAttackRange = true</span> on the Blackboard. <span class="mono">BTDecorator_AttackRange</span> activates Branch 1 (highest priority), which runs <span class="mono">BTTask_KillPlayer</span>.</p>
+                </div>
+                <div class="kill-path">
+                    <h4>Path B: Teleport Reaction Timeout</h4>
+                    <p>After teleporting, <span class="mono">BTService_ReactionWindow</span> decrements <span class="mono">ReactionTimer</span> each tick. If the timer reaches zero before the player looks at SCP-173, the service calls <span class="mono">TriggerKill()</span>. If the player does look in time, <span class="mono">BTTask_FreezeInPlace</span> cancels the reaction window by resetting the timer and clearing <span class="mono">bReactionActive</span>.</p>
+                </div>
+            </div>
+
+            <div class="config-table-wrap">
+                <h3 class="subsection-title">Configurable Parameters</h3>
+                <table class="config-table">
+                    <thead>
+                        <tr><th>Parameter</th><th>Location</th><th>Default</th><th>Range</th><th>Purpose</th></tr>
+                    </thead>
+                    <tbody>
+                        <tr><td><span class="mono">AttackDistance</span></td><td>SCP173Character</td><td>150 cm</td><td>0 &ndash; 500</td><td>Proximity radius for the instant kill trigger.</td></tr>
+                        <tr><td><span class="mono">ReactionWindowTime</span></td><td>SCP173Character</td><td>2.5s</td><td>0 &ndash; 10</td><td>Duration the player has to spot SCP-173 after teleport before being killed.</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </section>
+
+    <!-- ======================== VFX ======================== -->
+    <section class="section" id="vfx">
+        <div class="container">
+            <p class="section-label">Visual Feedback</p>
+            <h2 class="section-title">Dust Displacement Effect</h2>
+            <p class="section-desc">When SCP-173 becomes visible after moving, a dust particle effect spawns at its feet to suggest it was in motion just before the player looked. The effect uses a downward line trace to ensure particles appear on the actual ground surface regardless of terrain.</p>
+
+            <div class="video-showcase">
+                <div class="video-card">
+                    <div class="video-wrapper">
+                        <video controls preload="metadata">
+                            <source src="../Clip7.mp4" type="video/mp4">
+                        </video>
+                    </div>
+                    <div class="video-info">
+                        <h3>Clip 7 &mdash; Dust VFX</h3>
+                        <p>The player turns away and quickly snaps back. A dust poof appears at SCP-173's feet as it freezes, implying it was caught mid-motion. The VFX spawns at the ground surface detected by a downward line trace, not at the actor's center.</p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="how-it-works">
+                <h3 class="subsection-title">Ground Detection</h3>
+                <p><span class="mono">GetGroundLocation()</span> performs a downward <span class="mono">LineTraceSingleByChannel</span> (500cm) from the actor's location on <span class="mono">ECC_Visibility</span>. The impact point is used as the VFX spawn location, ensuring particles appear on the actual floor surface &mdash; whether flat ground, slopes, or stairs. Falls back to the bottom of the capsule if the trace misses.</p>
+            </div>
+
+            <div class="how-it-works">
+                <h3 class="subsection-title">FX Delay</h3>
+                <p>The dust VFX does not spawn instantly when observation begins. <span class="mono">BTTask_FreezeInPlace</span> waits for the configurable <span class="mono">FXDelay</span> (read from the pawn) before triggering the Observed state transition. This creates a subtle "just caught it" moment. If the decorator aborts the task during the delay (player looks away again), the VFX never fires &mdash; preventing false triggers.</p>
+            </div>
+
+            <div class="config-table-wrap">
+                <h3 class="subsection-title">Configurable Parameters</h3>
+                <table class="config-table">
+                    <thead>
+                        <tr><th>Parameter</th><th>Location</th><th>Default</th><th>Range</th><th>Purpose</th></tr>
+                    </thead>
+                    <tbody>
+                        <tr><td><span class="mono">DustEffect</span></td><td>SCP173Character</td><td>None (assign in BP)</td><td>&mdash;</td><td>Niagara particle system for the dust displacement effect.</td></tr>
+                        <tr><td><span class="mono">FXDelay</span></td><td>SCP173Character</td><td>0.3s</td><td>0 &ndash; 3</td><td>Delay before VFX spawns after the player sees SCP-173.</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </section>
+
+    <!-- ======================== CAMERA ======================== -->
+    <section class="section section-dark" id="camera">
+        <div class="container">
+            <p class="section-label">Camera Effects</p>
+            <h2 class="section-title">Proximity Shake &amp; Teleport Alert</h2>
+            <p class="section-desc">Camera effects serve as non-visual threat indicators. The proximity shake builds tension as SCP-173 closes in, while the teleport shake provides an urgent alert when it appears behind the player.</p>
+
+            <div class="video-showcase">
+                <div class="video-card">
+                    <div class="video-wrapper">
+                        <video controls preload="metadata">
+                            <source src="../Clip8.mp4" type="video/mp4">
+                        </video>
+                    </div>
+                    <div class="video-info">
+                        <h3>Clip 8 &mdash; Camera Shake Proximity</h3>
+                        <p>Walking toward a frozen SCP-173 shows the camera shake intensifying as the distance closes. Moving backward shows the shake fading. The effect uses a multi-axis sine wave offset on the SpringArm component with distance-based intensity scaling.</p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="camera-details">
+                <div class="camera-type">
+                    <h4>Proximity Shake</h4>
+                    <p>Driven by <span class="mono">BTService_SCP173Perception</span> updating <span class="mono">DistanceToPlayer</span> on the Blackboard. The player character reads this distance and computes a <span class="mono">ShakeIntensity</span> that scales from zero (at <span class="mono">CameraShakeStartDistance</span>) to <span class="mono">MaxCameraShakeIntensity</span> (at distance zero). The shake is applied as a multi-axis sine wave offset: X uses <span class="mono">CameraShakeFrequency</span>, Y uses a 1.3x multiplier, Z uses 0.7x &mdash; creating an organic, non-repeating tremor.</p>
+                </div>
+                <div class="camera-type">
+                    <h4>Teleport Shake</h4>
+                    <p>A one-shot tension burst triggered by <span class="mono">TriggerTeleportCameraShake()</span> when SCP-173 teleports. Uses <span class="mono">TeleportShakeIntensity</span> and <span class="mono">TeleportShakeDuration</span> for a quick, sharp jolt that alerts the player to look behind them.</p>
+                </div>
+            </div>
+
+            <div class="config-table-wrap">
+                <h3 class="subsection-title">Configurable Parameters</h3>
+                <table class="config-table">
+                    <thead>
+                        <tr><th>Parameter</th><th>Location</th><th>Default</th><th>Range</th><th>Purpose</th></tr>
+                    </thead>
+                    <tbody>
+                        <tr><td><span class="mono">MaxCameraShakeIntensity</span></td><td>HorrorPlayerCharacter</td><td>8.0</td><td>&mdash;</td><td>Maximum shake amplitude when SCP-173 is at point-blank range.</td></tr>
+                        <tr><td><span class="mono">CameraShakeStartDistance</span></td><td>HorrorPlayerCharacter</td><td>1000 cm</td><td>&mdash;</td><td>Distance at which shake begins. No shake beyond this range.</td></tr>
+                        <tr><td><span class="mono">CameraShakeFrequency</span></td><td>HorrorPlayerCharacter</td><td>18.0</td><td>&mdash;</td><td>Base frequency of the sine wave oscillation.</td></tr>
+                        <tr><td><span class="mono">TeleportShakeIntensity</span></td><td>HorrorPlayerCharacter</td><td>10.0</td><td>&mdash;</td><td>Intensity of the one-shot teleport alert shake.</td></tr>
+                        <tr><td><span class="mono">TeleportShakeDuration</span></td><td>HorrorPlayerCharacter</td><td>0.75s</td><td>&mdash;</td><td>How long the teleport shake lasts.</td></tr>
+                        <tr><td><span class="mono">CameraHeightOffset</span></td><td>HorrorPlayerCharacter</td><td>60 cm</td><td>&mdash;</td><td>Vertical offset of the camera above the character origin.</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </section>
+
+    <!-- ======================== AUDIO ======================== -->
+    <section class="section" id="audio">
+        <div class="container">
+            <p class="section-label">Audio Feedback</p>
+            <h2 class="section-title">Three Layers of Sound</h2>
+            <p class="section-desc">Audio serves as a critical gameplay feedback channel. Each sound layer communicates a different aspect of SCP-173's state, giving the player spatial awareness without needing to look directly at the threat.</p>
+
+            <div class="video-showcase">
+                <div class="video-card">
+                    <div class="video-wrapper">
+                        <video controls preload="metadata">
+                            <source src="../Clip9.mp4" type="video/mp4">
+                        </video>
+                    </div>
+                    <div class="video-info">
+                        <h3>Clip 9 &mdash; Audio Showcase</h3>
+                        <p>A continuous take demonstrating all three audio layers: the ambient presence audio fading in as the player approaches SCP-173, the looping stone scraping sound when SCP-173 moves while unobserved, and the distinct teleport audio cue when the failsafe triggers.</p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="audio-layers">
+                <div class="audio-layer">
+                    <div class="layer-icon">
+                        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="3"/></svg>
+                    </div>
+                    <h4>Ambient Presence</h4>
+                    <p>A persistent <span class="mono">UAudioComponent</span> (<span class="mono">AmbientAudioComponent</span>) attached to SCP-173. Volume scales inversely with distance using <span class="mono">UpdateAmbientAudio()</span> &mdash; louder when closer, silent beyond <span class="mono">AmbientAudioMaxDistance</span>. Auto-plays on BeginPlay if a sound asset is assigned.</p>
+                </div>
+                <div class="audio-layer">
+                    <div class="layer-icon">
+                        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 18V6l12-3v12"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="15" r="3"/></svg>
+                    </div>
+                    <h4>Movement Sound (Looping)</h4>
+                    <p>A second <span class="mono">UAudioComponent</span> (<span class="mono">MovementAudioComponent</span>) that plays a looping stone scraping sound. Automatically starts when SCP-173 transitions to the Unobserved state and stops when it transitions to Observed. Controlled via <span class="mono">StartMovementSound()</span> / <span class="mono">StopMovementSound()</span> inside <span class="mono">SetCurrentState()</span>.</p>
+                </div>
+                <div class="audio-layer">
+                    <div class="layer-icon">
+                        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14"/></svg>
+                    </div>
+                    <h4>Teleport Cue</h4>
+                    <p>A one-shot <span class="mono">PlaySoundAtLocation</span> fired when SCP-173 teleports. This is the player's primary alert that SCP-173 is now behind them. Played via <span class="mono">PlayTeleportSound()</span> in <span class="mono">BTTask_TeleportBehindPlayer</span>.</p>
+                </div>
+            </div>
+
+            <div class="config-table-wrap">
+                <h3 class="subsection-title">Configurable Parameters</h3>
+                <table class="config-table">
+                    <thead>
+                        <tr><th>Parameter</th><th>Location</th><th>Default</th><th>Range</th><th>Purpose</th></tr>
+                    </thead>
+                    <tbody>
+                        <tr><td><span class="mono">TeleportSound</span></td><td>SCP173Character</td><td>None (assign in BP)</td><td>&mdash;</td><td>Sound asset for the teleport audio cue.</td></tr>
+                        <tr><td><span class="mono">MovementSound</span></td><td>SCP173Character</td><td>None (assign in BP)</td><td>&mdash;</td><td>Looping sound asset for stone scraping while moving.</td></tr>
+                        <tr><td><span class="mono">AmbientAudioMaxDistance</span></td><td>SCP173Character</td><td>2000 cm</td><td>0 &ndash; 5000</td><td>Maximum distance at which ambient audio is audible. Beyond this, volume is zero.</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </section>
+
+    <!-- ======================== FLANKING ======================== -->
+    <section class="section section-dark" id="flanking">
+        <div class="container">
+            <p class="section-label">Reposition Behaviour</p>
+            <h2 class="section-title">Unpredictable Flanking</h2>
+            <p class="section-desc">Instead of always moving directly toward the player, SCP-173 occasionally repositions to flanking angles. This prevents players from easily predicting its position and creates more tense encounters where it can appear from unexpected directions.</p>
+
+            <div class="video-showcase">
+                <div class="video-card">
+                    <div class="video-wrapper">
+                        <video controls preload="metadata">
+                            <source src="../Clip6.mp4" type="video/mp4">
+                        </video>
+                    </div>
+                    <div class="video-info">
+                        <h3>Clip 6 &mdash; Flanking Behaviour</h3>
+                        <p>Repeatedly looking away and back shows SCP-173 arriving from different angles rather than always dead-ahead. The flanking chance is set to 50% for this demonstration, with a max flank angle of 60 degrees, creating clearly visible lateral repositioning.</p>
+                        <p class="note">FlankChance set to 0.5 for demonstration.</p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="how-it-works">
+                <h3 class="subsection-title">How Flanking Works</h3>
+                <div class="step-grid">
+                    <div class="step">
+                        <div class="step-num">1</div>
+                        <p><strong>BTService_FlankDecision</strong> rolls a random value each service tick. If it falls below <span class="mono">FlankChance</span>, flanking is activated.</p>
+                    </div>
+                    <div class="step">
+                        <div class="step-num">2</div>
+                        <p>The service computes a flank target by rotating the player-to-SCP173 direction vector by a random angle between <span class="mono">-MaxFlankAngle</span> and <span class="mono">+MaxFlankAngle</span> degrees.</p>
+                    </div>
+                    <div class="step">
+                        <div class="step-num">3</div>
+                        <p>The computed position is written to the <span class="mono">FlankTarget</span> Blackboard key and <span class="mono">bShouldFlank</span> is set to true.</p>
+                    </div>
+                    <div class="step">
+                        <div class="step-num">4</div>
+                        <p><strong>BTTask_MoveToFlankPosition</strong> calls <span class="mono">MoveToLocation(FlankTarget)</span> using NavMesh pathfinding. If the flank target is invalid, it gracefully falls back to <span class="mono">MoveToActor(Player)</span>.</p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="config-table-wrap">
+                <h3 class="subsection-title">Configurable Parameters</h3>
+                <table class="config-table">
+                    <thead>
+                        <tr><th>Parameter</th><th>Location</th><th>Default</th><th>Range</th><th>Purpose</th></tr>
+                    </thead>
+                    <tbody>
+                        <tr><td><span class="mono">FlankChance</span></td><td>SCP173Character</td><td>0.3 (30%)</td><td>0 &ndash; 1</td><td>Probability of choosing a flanking path instead of direct approach.</td></tr>
+                        <tr><td><span class="mono">MaxFlankAngle</span></td><td>SCP173Character</td><td>60&deg;</td><td>0 &ndash; 180</td><td>Maximum angle offset for the flanking reposition.</td></tr>
+                        <tr><td><span class="mono">AcceptanceRadius</span></td><td>BTTask_MoveToFlankPosition</td><td>100 cm</td><td>10 &ndash; 500</td><td>How close SCP-173 must reach the flank target before the task completes.</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </section>
+
+    <!-- ======================== AI STATES ======================== -->
+    <section class="section" id="states">
+        <div class="container">
+            <p class="section-label">AI State Logic</p>
+            <h2 class="section-title">State Machine via Behaviour Tree</h2>
+            <p class="section-desc">SCP-173's states are not driven by a traditional state machine. Instead, the Behaviour Tree's priority-based branch selection naturally produces the correct state transitions through decorator conditions and Blackboard keys.</p>
+
+            <div class="states-grid">
+                <div class="state-card state-observed">
+                    <div class="state-indicator"></div>
+                    <h3>Observed</h3>
+                    <p>SCP-173 is frozen and cannot move. Triggered when the player's camera has direct, unobstructed line of sight within the FOV half-angle. Movement sound stops, NavMesh pathfinding is halted, AI focus is cleared. After the configurable FX delay, dust VFX spawns at the ground and <span class="mono">BP_OnObserved</span> fires.</p>
+                    <span class="state-trigger">Trigger: BTDecorator_IsObserved = true</span>
+                </div>
+                <div class="state-card state-unobserved">
+                    <div class="state-indicator"></div>
+                    <h3>Unobserved</h3>
+                    <p>SCP-173 actively moves toward or repositions around the player using NavMesh pathfinding. Movement sound loops, AI focus is set to the player (face-tracking), and the unobserved timer begins counting toward the teleport threshold.</p>
+                    <span class="state-trigger">Trigger: BTDecorator_IsObserved = false</span>
+                </div>
+                <div class="state-card state-teleport">
+                    <div class="state-indicator"></div>
+                    <h3>Teleport Ready</h3>
+                    <p>Line of sight has been broken for longer than <span class="mono">TeleportTimeout</span>. SCP-173 teleports behind the player via <span class="mono">SetActorLocation</span>, activates the reaction window, plays the teleport audio cue, and triggers camera shake on the player.</p>
+                    <span class="state-trigger">Trigger: UnobservedTime &ge; TeleportTimeout</span>
+                </div>
+                <div class="state-card state-attack">
+                    <div class="state-indicator"></div>
+                    <h3>Attack Range</h3>
+                    <p>SCP-173 is within <span class="mono">AttackDistance</span> of the player. The highest-priority BT branch fires immediately, executing the kill sequence via <span class="mono">TriggerKill()</span>. This overrides all other states.</p>
+                    <span class="state-trigger">Trigger: DistanceToPlayer &le; AttackDistance</span>
+                </div>
+            </div>
+
+            <div class="bb-keys">
+                <h3 class="subsection-title">Blackboard Keys</h3>
+                <div class="bb-grid">
+                    <div class="bb-key"><span class="mono">SelfActor</span><span class="bb-type">Object</span></div>
+                    <div class="bb-key"><span class="mono">PlayerActor</span><span class="bb-type">Object</span></div>
+                    <div class="bb-key"><span class="mono">bIsObserved</span><span class="bb-type">Bool</span></div>
+                    <div class="bb-key"><span class="mono">bInAttackRange</span><span class="bb-type">Bool</span></div>
+                    <div class="bb-key"><span class="mono">bTeleportReady</span><span class="bb-type">Bool</span></div>
+                    <div class="bb-key"><span class="mono">bReactionActive</span><span class="bb-type">Bool</span></div>
+                    <div class="bb-key"><span class="mono">bShouldFlank</span><span class="bb-type">Bool</span></div>
+                    <div class="bb-key"><span class="mono">DistanceToPlayer</span><span class="bb-type">Float</span></div>
+                    <div class="bb-key"><span class="mono">UnobservedTime</span><span class="bb-type">Float</span></div>
+                    <div class="bb-key"><span class="mono">FlankTarget</span><span class="bb-type">Vector</span></div>
+                    <div class="bb-key"><span class="mono">PlayerLocation</span><span class="bb-type">Vector</span></div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- ======================== AI CONTROLLER ======================== -->
+    <section class="section section-dark" id="ai-controller">
+        <div class="container">
+            <p class="section-label">Setup &amp; Configuration</p>
+            <h2 class="section-title">AI Controller &amp; Player Input</h2>
+            <p class="section-desc">The remaining configurables that wire everything together &mdash; the AI Controller's Behaviour Tree and Blackboard assignments, and the player character's input action bindings.</p>
+
+            <div class="config-table-wrap">
+                <h3 class="subsection-title">AI Controller (SCP173AIController)</h3>
+                <table class="config-table">
+                    <thead>
+                        <tr><th>Parameter</th><th>Location</th><th>Default</th><th>Purpose</th></tr>
+                    </thead>
+                    <tbody>
+                        <tr><td><span class="mono">BehaviorTreeAsset</span></td><td>SCP173AIController</td><td>None (assign in BP)</td><td>The Behaviour Tree asset that drives SCP-173's AI logic.</td></tr>
+                        <tr><td><span class="mono">BlackboardAsset</span></td><td>SCP173AIController</td><td>None (assign in BP)</td><td>The Blackboard data asset containing all AI keys.</td></tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <div class="config-table-wrap">
+                <h3 class="subsection-title">Player Character (HorrorPlayerCharacter)</h3>
+                <table class="config-table">
+                    <thead>
+                        <tr><th>Parameter</th><th>Location</th><th>Default</th><th>Purpose</th></tr>
+                    </thead>
+                    <tbody>
+                        <tr><td><span class="mono">MoveAction</span></td><td>HorrorPlayerCharacter</td><td>None (assign in BP)</td><td>Enhanced Input action for WASD / stick movement.</td></tr>
+                        <tr><td><span class="mono">LookAction</span></td><td>HorrorPlayerCharacter</td><td>None (assign in BP)</td><td>Enhanced Input action for mouse / stick camera look.</td></tr>
+                        <tr><td><span class="mono">JumpAction</span></td><td>HorrorPlayerCharacter</td><td>None (assign in BP)</td><td>Enhanced Input action for jumping.</td></tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <div class="config-table-wrap">
+                <h3 class="subsection-title">Player Controller (HorrorPlayerController)</h3>
+                <table class="config-table">
+                    <thead>
+                        <tr><th>Parameter</th><th>Location</th><th>Default</th><th>Purpose</th></tr>
+                    </thead>
+                    <tbody>
+                        <tr><td><span class="mono">DefaultMappingContexts</span></td><td>HorrorPlayerController</td><td>Empty array</td><td>Array of Input Mapping Contexts applied on BeginPlay.</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </section>
+
+    <!-- ======================== FOOTER ======================== -->
+    <footer class="footer">
+        <div class="container">
+            <div class="footer-content">
+                <div class="footer-left">
+                    <h3>SCP-173 AI Behaviour</h3>
+                    <p>Zatun Game Test &mdash; Assessment Submission</p>
+                </div>
+                <div class="footer-right">
+                    <p class="candidate-name">Abdus Shafiq</p>
+                    <p>Unreal Engine 5.7 &middot; 100% C++ &middot; Behaviour Tree Architecture</p>
+                </div>
+            </div>
+            <div class="footer-bottom">
+                <p>All 30 task requirements from the assessment document have been implemented and demonstrated.</p>
+            </div>
+        </div>
+    </footer>
+
+    <script src="script.js"></script>
+</body>
+</html>
