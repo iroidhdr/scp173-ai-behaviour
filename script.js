@@ -19,7 +19,8 @@ document.addEventListener('DOMContentLoaded', () => {
         '.step, .config-table-wrap, .rationale-box, .audio-layer, ' +
         '.kill-path, .camera-type, .state-card, .bb-keys, ' +
         '.how-it-works, .arch-base-class, .section-label, ' +
-        '.section-title, .section-desc, .hero-meta'
+        '.section-title, .section-desc, .hero-meta, ' +
+        '.highlight-card, .edge-case-card, .flow-diagram'
     );
 
     fadeTargets.forEach(el => el.classList.add('fade-in'));
@@ -64,7 +65,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // ---- Staggered fade-in for grid children ----
     const grids = document.querySelectorAll(
-        '.overview-grid, .step-grid, .states-grid, .bb-grid, .audio-layers'
+        '.overview-grid, .step-grid, .states-grid, .bb-grid, .audio-layers, ' +
+        '.highlights-grid, .edge-cases-grid'
     );
 
     const gridObserver = new IntersectionObserver((entries) => {

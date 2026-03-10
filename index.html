@@ -17,6 +17,7 @@
             <a href="#hero" class="nav-logo">SCP-173</a>
             <ul class="nav-links">
                 <li><a href="#overview">Overview</a></li>
+                <li><a href="#highlights">Highlights</a></li>
                 <li><a href="#architecture">Architecture</a></li>
                 <li><a href="#core-behaviour">Core</a></li>
                 <li><a href="#line-of-sight">LOS</a></li>
@@ -26,6 +27,7 @@
                 <li><a href="#vfx">VFX</a></li>
                 <li><a href="#camera">Camera</a></li>
                 <li><a href="#audio">Audio</a></li>
+                <li><a href="#edge-cases">Edge Cases</a></li>
                 <li><a href="#states">States</a></li>
             </ul>
         </div>
@@ -103,13 +105,146 @@
         </div>
     </section>
 
+    <!-- ======================== TECHNICAL HIGHLIGHTS ======================== -->
+    <section class="section section-dark" id="highlights">
+        <div class="container">
+            <p class="section-label">Technical Highlights</p>
+            <h2 class="section-title">Engineering Decisions</h2>
+            <p class="section-desc">Key architectural choices that separate this from a basic gameplay implementation. Each decision was made with production scalability, performance, and designer workflow in mind.</p>
+
+            <div class="highlights-grid">
+                <div class="highlight-card">
+                    <div class="highlight-icon">
+                        <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+                    </div>
+                    <h3>Zero Actor Tick</h3>
+                    <p>SCP-173's character has <span class="mono">PrimaryActorTick</span> disabled. All AI logic runs through the Behaviour Tree's own update cycle &mdash; services tick on configurable intervals, decorators evaluate per-frame only when needed. No wasted CPU on idle frames.</p>
+                </div>
+                <div class="highlight-card">
+                    <div class="highlight-icon">
+                        <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+                    </div>
+                    <h3>Reverse Perception</h3>
+                    <p>Observation is checked from the player's camera to the AI, not the other way around. This required a custom system instead of UE5's <span class="mono">UAIPerceptionComponent</span>, which only traces outward from the AI's perspective.</p>
+                </div>
+                <div class="highlight-card">
+                    <div class="highlight-icon">
+                        <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+                    </div>
+                    <h3>Behaviour Tree Priority Arbitration</h3>
+                    <p>Five branches with <span class="mono">FlowAbortMode::Both</span> create an implicit priority system. Kill aborts everything, Freeze aborts movement, Teleport aborts navigation &mdash; no manual state machine transitions needed.</p>
+                </div>
+                <div class="highlight-card">
+                    <div class="highlight-icon">
+                        <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/></svg>
+                    </div>
+                    <h3>NavMesh-Aware Movement</h3>
+                    <p>All pathfinding uses <span class="mono">MoveToActor</span> / <span class="mono">MoveToLocation</span> through UE5's navigation system. Slopes, stairs, and obstacles are handled automatically. Teleport deliberately bypasses NavMesh using <span class="mono">SetActorLocation</span> as a failsafe.</p>
+                </div>
+                <div class="highlight-card">
+                    <div class="highlight-icon">
+                        <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M9 18V6l12-3v12"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="15" r="3"/></svg>
+                    </div>
+                    <h3>Event-Driven Audio &amp; VFX</h3>
+                    <p>Sound and particles are triggered by state transitions inside <span class="mono">SetCurrentState()</span>, not by polling. Movement sound starts/stops on state change, dust VFX spawns at ground-traced locations with a configurable delay.</p>
+                </div>
+                <div class="highlight-card">
+                    <div class="highlight-icon">
+                        <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
+                    </div>
+                    <h3>Modular Node Architecture</h3>
+                    <p>11 custom BT classes with single-responsibility design. Movement tasks inherit from a shared abstract base, overriding only <span class="mono">StartNavMovement()</span>. Focus management, path monitoring, and abort handling are centralized and reused.</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
     <!-- ======================== ARCHITECTURE ======================== -->
-    <section class="section section-dark" id="architecture">
+    <section class="section" id="architecture">
         <div class="container">
             <p class="section-label">System Architecture</p>
             <h2 class="section-title">Behaviour Tree Structure</h2>
             <p class="section-desc">The entire AI runs through a single Behaviour Tree with 5 priority-ordered branches. Higher-priority branches automatically abort lower ones. The system is built from 11 custom C++ classes &mdash; 3 services, 2 decorators, and 6 tasks.</p>
 
+            <!-- System Architecture Flowchart -->
+            <div class="flow-diagram">
+                <h3 class="subsection-title" style="margin-top: 0;">System Flow</h3>
+                <div class="flow-container">
+                    <div class="flow-row">
+                        <div class="flow-node flow-start">Player Camera</div>
+                    </div>
+                    <div class="flow-arrow-down"></div>
+                    <div class="flow-row">
+                        <div class="flow-node flow-process">FOV + LOS Check<span class="flow-detail">BTService_UpdatePerception</span></div>
+                    </div>
+                    <div class="flow-arrow-down"></div>
+                    <div class="flow-row">
+                        <div class="flow-node flow-decision">Observed?</div>
+                    </div>
+                    <div class="flow-branch">
+                        <div class="flow-branch-left">
+                            <div class="flow-branch-label">YES</div>
+                            <div class="flow-arrow-down"></div>
+                            <div class="flow-node flow-action flow-observed">Freeze In Place<span class="flow-detail">Stop movement, clear focus, dust VFX</span></div>
+                        </div>
+                        <div class="flow-branch-right">
+                            <div class="flow-branch-label">NO</div>
+                            <div class="flow-arrow-down"></div>
+                            <div class="flow-node flow-process">Unobserved Timer<span class="flow-detail">Accumulates DeltaTime</span></div>
+                            <div class="flow-arrow-down"></div>
+                            <div class="flow-node flow-decision">Timeout?</div>
+                            <div class="flow-sub-branch">
+                                <div class="flow-sub-left">
+                                    <div class="flow-branch-label">YES</div>
+                                    <div class="flow-arrow-down"></div>
+                                    <div class="flow-node flow-action flow-teleport">Teleport Behind<span class="flow-detail">SetActorLocation + reaction window</span></div>
+                                    <div class="flow-arrow-down"></div>
+                                    <div class="flow-node flow-decision">Looked?</div>
+                                    <div class="flow-sub-branch">
+                                        <div class="flow-sub-left">
+                                            <div class="flow-branch-label" style="color: var(--state-observed);">YES</div>
+                                            <div class="flow-arrow-down"></div>
+                                            <div class="flow-node flow-action flow-observed" style="font-size: 0.75rem;">Freeze</div>
+                                        </div>
+                                        <div class="flow-sub-right">
+                                            <div class="flow-branch-label" style="color: var(--state-attack);">NO</div>
+                                            <div class="flow-arrow-down"></div>
+                                            <div class="flow-node flow-action flow-kill">Kill</div>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="flow-sub-right">
+                                    <div class="flow-branch-label">NO</div>
+                                    <div class="flow-arrow-down"></div>
+                                    <div class="flow-node flow-decision" style="font-size: 0.75rem;">Flank?</div>
+                                    <div class="flow-sub-branch">
+                                        <div class="flow-sub-left">
+                                            <div class="flow-branch-label">YES</div>
+                                            <div class="flow-arrow-down"></div>
+                                            <div class="flow-node flow-action flow-unobserved" style="font-size: 0.75rem;">Flank</div>
+                                        </div>
+                                        <div class="flow-sub-right">
+                                            <div class="flow-branch-label">NO</div>
+                                            <div class="flow-arrow-down"></div>
+                                            <div class="flow-node flow-action flow-unobserved" style="font-size: 0.75rem;">Move</div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="flow-footer">
+                        <div class="flow-legend">
+                            <span class="flow-legend-item"><span class="flow-dot" style="background: var(--state-observed);"></span> Observed</span>
+                            <span class="flow-legend-item"><span class="flow-dot" style="background: var(--state-unobserved);"></span> Unobserved</span>
+                            <span class="flow-legend-item"><span class="flow-dot" style="background: var(--state-teleport);"></span> Teleport</span>
+                            <span class="flow-legend-item"><span class="flow-dot" style="background: var(--state-attack);"></span> Kill</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <h3 class="subsection-title">Priority Branches</h3>
             <div class="arch-tree">
                 <div class="arch-branch">
                     <div class="branch-header priority-1">
@@ -174,7 +309,7 @@
     </section>
 
     <!-- ======================== CORE BEHAVIOUR ======================== -->
-    <section class="section" id="core-behaviour">
+    <section class="section section-dark" id="core-behaviour">
         <div class="container">
             <p class="section-label">Core Behaviour</p>
             <h2 class="section-title">Freeze When Observed, Move When Unseen</h2>
@@ -232,7 +367,7 @@
     </section>
 
     <!-- ======================== LINE OF SIGHT ======================== -->
-    <section class="section section-dark" id="line-of-sight">
+    <section class="section" id="line-of-sight">
         <div class="container">
             <p class="section-label">Line-of-Sight Detection</p>
             <h2 class="section-title">Camera-Based Observation System</h2>
@@ -294,7 +429,7 @@
     </section>
 
     <!-- ======================== TELEPORT ======================== -->
-    <section class="section" id="teleport">
+    <section class="section section-dark" id="teleport">
         <div class="container">
             <p class="section-label">Teleport Mechanic</p>
             <h2 class="section-title">Failsafe Repositioning</h2>
@@ -369,7 +504,7 @@
     </section>
 
     <!-- ======================== KILL ======================== -->
-    <section class="section section-dark" id="kill">
+    <section class="section" id="kill">
         <div class="container">
             <p class="section-label">Player Kill Condition</p>
             <h2 class="section-title">Two Paths to Death</h2>
@@ -416,7 +551,7 @@
     </section>
 
     <!-- ======================== FLANKING ======================== -->
-    <section class="section" id="flanking">
+    <section class="section section-dark" id="flanking">
         <div class="container">
             <p class="section-label">Reposition Behaviour</p>
             <h2 class="section-title">Unpredictable Flanking</h2>
@@ -476,7 +611,7 @@
     </section>
 
     <!-- ======================== VFX ======================== -->
-    <section class="section section-dark" id="vfx">
+    <section class="section" id="vfx">
         <div class="container">
             <p class="section-label">Visual Feedback</p>
             <h2 class="section-title">Dust Displacement Effect</h2>
@@ -522,7 +657,7 @@
     </section>
 
     <!-- ======================== CAMERA ======================== -->
-    <section class="section" id="camera">
+    <section class="section section-dark" id="camera">
         <div class="container">
             <p class="section-label">Camera Effects</p>
             <h2 class="section-title">Proximity Shake &amp; Teleport Alert</h2>
@@ -573,7 +708,7 @@
     </section>
 
     <!-- ======================== AUDIO ======================== -->
-    <section class="section section-dark" id="audio">
+    <section class="section" id="audio">
         <div class="container">
             <p class="section-label">Audio Feedback</p>
             <h2 class="section-title">Three Layers of Sound</h2>
@@ -629,6 +764,60 @@
                         <tr><td><span class="mono">AmbientAudioMaxDistance</span></td><td>SCP173Character</td><td>2000 cm</td><td>0 &ndash; 5000</td><td>Maximum distance at which ambient audio is audible. Beyond this, volume is zero.</td></tr>
                     </tbody>
                 </table>
+            </div>
+        </div>
+    </section>
+
+    <!-- ======================== EDGE CASES ======================== -->
+    <section class="section section-dark" id="edge-cases">
+        <div class="container">
+            <p class="section-label">Robustness</p>
+            <h2 class="section-title">Edge Cases Handled</h2>
+            <p class="section-desc">Production AI must handle every corner case gracefully. Each scenario below was identified during development and has a dedicated solution built into the system.</p>
+
+            <div class="edge-cases-grid">
+                <div class="edge-case-card">
+                    <div class="edge-case-icon">
+                        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/><line x1="1" y1="1" x2="23" y2="23" stroke-width="2"/></svg>
+                    </div>
+                    <h4>Teleport FOV Validation</h4>
+                    <p>Before teleporting, the system double-checks that the destination is outside the player's camera FOV using <span class="mono">IsLocationInFOV()</span>. If the teleport location would be visible, the teleport is rejected and SCP-173 continues normal movement instead of appearing in plain sight.</p>
+                </div>
+                <div class="edge-case-card">
+                    <div class="edge-case-icon">
+                        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+                    </div>
+                    <h4>Geometry Collision Prevention</h4>
+                    <p>Teleport uses <span class="mono">FindTeleportLocation()</span> which sweeps behind the player and validates with line traces to ensure no geometry blocks the destination. Returns <span class="mono">MAX_FLT</span> sentinel on failure, causing a graceful fallback to standard movement.</p>
+                </div>
+                <div class="edge-case-card">
+                    <div class="edge-case-icon">
+                        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+                    </div>
+                    <h4>Post-Teleport Reaction Window</h4>
+                    <p>After teleporting behind the player, a configurable reaction timer begins. If the player turns around in time, the timer cancels and SCP-173 freezes normally. If not, the reaction service triggers a kill. This prevents unfair instant deaths while maintaining threat tension.</p>
+                </div>
+                <div class="edge-case-card">
+                    <div class="edge-case-icon">
+                        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+                    </div>
+                    <h4>Instant Movement Interruption</h4>
+                    <p>All movement task decorators use <span class="mono">FlowAbortMode::Both</span>. The moment the player's camera detects SCP-173, the BT immediately aborts the active movement task, calls <span class="mono">StopMovement()</span> and <span class="mono">ClearFocus()</span>, and activates the freeze branch &mdash; no frame delay.</p>
+                </div>
+                <div class="edge-case-card">
+                    <div class="edge-case-icon">
+                        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/><polyline points="7.5 4.21 12 6.81 16.5 4.21"/><polyline points="7.5 19.79 7.5 14.6 3 12"/><polyline points="21 12 16.5 14.6 16.5 19.79"/></svg>
+                    </div>
+                    <h4>Ground-Traced VFX Placement</h4>
+                    <p>Dust VFX doesn't spawn at the capsule center. A 500cm downward <span class="mono">LineTraceSingleByChannel</span> finds the actual ground surface. Fallback: capsule half-height subtraction if the trace misses. Works correctly on slopes, stairs, and uneven terrain.</p>
+                </div>
+                <div class="edge-case-card">
+                    <div class="edge-case-icon">
+                        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+                    </div>
+                    <h4>Focus Lifecycle Management</h4>
+                    <p>AI face-tracking (<span class="mono">SetFocus</span>) activates during movement and post-teleport, and is properly cleared (<span class="mono">ClearFocus</span>) on freeze and movement completion. Prevents SCP-173 from rotating toward the player while frozen, which would break the illusion of a statue.</p>
+                </div>
             </div>
         </div>
     </section>
