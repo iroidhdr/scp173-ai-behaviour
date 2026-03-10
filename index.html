@@ -22,10 +22,10 @@
                 <li><a href="#line-of-sight">LOS</a></li>
                 <li><a href="#teleport">Teleport</a></li>
                 <li><a href="#kill">Kill</a></li>
+                <li><a href="#flanking">Flanking</a></li>
                 <li><a href="#vfx">VFX</a></li>
                 <li><a href="#camera">Camera</a></li>
                 <li><a href="#audio">Audio</a></li>
-                <li><a href="#flanking">Flanking</a></li>
                 <li><a href="#states">States</a></li>
             </ul>
         </div>
@@ -415,8 +415,68 @@
         </div>
     </section>
 
+    <!-- ======================== FLANKING ======================== -->
+    <section class="section" id="flanking">
+        <div class="container">
+            <p class="section-label">Reposition Behaviour</p>
+            <h2 class="section-title">Unpredictable Flanking</h2>
+            <p class="section-desc">Instead of always moving directly toward the player, SCP-173 occasionally repositions to flanking angles. This prevents players from easily predicting its position and creates more tense encounters where it can appear from unexpected directions.</p>
+
+            <div class="video-showcase">
+                <div class="video-card">
+                    <div class="video-wrapper">
+                        <video controls preload="metadata">
+                            <source src="Clip6.mp4" type="video/mp4">
+                        </video>
+                    </div>
+                    <div class="video-info">
+                        <h3>Clip 6 &mdash; Flanking Behaviour</h3>
+                        <p>Repeatedly looking away and back shows SCP-173 arriving from different angles rather than always dead-ahead. The flanking chance is set to 50% for this demonstration, with a max flank angle of 60 degrees, creating clearly visible lateral repositioning.</p>
+                        <p class="note">FlankChance set to 0.5 for demonstration.</p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="how-it-works">
+                <h3 class="subsection-title">How Flanking Works</h3>
+                <div class="step-grid">
+                    <div class="step">
+                        <div class="step-num">1</div>
+                        <p><strong>BTService_FlankDecision</strong> rolls a random value each service tick. If it falls below <span class="mono">FlankChance</span>, flanking is activated.</p>
+                    </div>
+                    <div class="step">
+                        <div class="step-num">2</div>
+                        <p>The service computes a flank target by rotating the player-to-SCP173 direction vector by a random angle between <span class="mono">-MaxFlankAngle</span> and <span class="mono">+MaxFlankAngle</span> degrees.</p>
+                    </div>
+                    <div class="step">
+                        <div class="step-num">3</div>
+                        <p>The computed position is written to the <span class="mono">FlankTarget</span> Blackboard key and <span class="mono">bShouldFlank</span> is set to true.</p>
+                    </div>
+                    <div class="step">
+                        <div class="step-num">4</div>
+                        <p><strong>BTTask_MoveToFlankPosition</strong> calls <span class="mono">MoveToLocation(FlankTarget)</span> using NavMesh pathfinding. If the flank target is invalid, it gracefully falls back to <span class="mono">MoveToActor(Player)</span>.</p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="config-table-wrap">
+                <h3 class="subsection-title">Configurable Parameters</h3>
+                <table class="config-table">
+                    <thead>
+                        <tr><th>Parameter</th><th>Location</th><th>Default</th><th>Range</th><th>Purpose</th></tr>
+                    </thead>
+                    <tbody>
+                        <tr><td><span class="mono">FlankChance</span></td><td>SCP173Character</td><td>0.3 (30%)</td><td>0 &ndash; 1</td><td>Probability of choosing a flanking path instead of direct approach.</td></tr>
+                        <tr><td><span class="mono">MaxFlankAngle</span></td><td>SCP173Character</td><td>60&deg;</td><td>0 &ndash; 180</td><td>Maximum angle offset for the flanking reposition.</td></tr>
+                        <tr><td><span class="mono">AcceptanceRadius</span></td><td>BTTask_MoveToFlankPosition</td><td>100 cm</td><td>10 &ndash; 500</td><td>How close SCP-173 must reach the flank target before the task completes.</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </section>
+
     <!-- ======================== VFX ======================== -->
-    <section class="section" id="vfx">
+    <section class="section section-dark" id="vfx">
         <div class="container">
             <p class="section-label">Visual Feedback</p>
             <h2 class="section-title">Dust Displacement Effect</h2>
@@ -462,7 +522,7 @@
     </section>
 
     <!-- ======================== CAMERA ======================== -->
-    <section class="section section-dark" id="camera">
+    <section class="section" id="camera">
         <div class="container">
             <p class="section-label">Camera Effects</p>
             <h2 class="section-title">Proximity Shake &amp; Teleport Alert</h2>
@@ -513,7 +573,7 @@
     </section>
 
     <!-- ======================== AUDIO ======================== -->
-    <section class="section" id="audio">
+    <section class="section section-dark" id="audio">
         <div class="container">
             <p class="section-label">Audio Feedback</p>
             <h2 class="section-title">Three Layers of Sound</h2>
@@ -567,66 +627,6 @@
                         <tr><td><span class="mono">TeleportSound</span></td><td>SCP173Character</td><td>None (assign in BP)</td><td>&mdash;</td><td>Sound asset for the teleport audio cue.</td></tr>
                         <tr><td><span class="mono">MovementSound</span></td><td>SCP173Character</td><td>None (assign in BP)</td><td>&mdash;</td><td>Looping sound asset for stone scraping while moving.</td></tr>
                         <tr><td><span class="mono">AmbientAudioMaxDistance</span></td><td>SCP173Character</td><td>2000 cm</td><td>0 &ndash; 5000</td><td>Maximum distance at which ambient audio is audible. Beyond this, volume is zero.</td></tr>
-                    </tbody>
-                </table>
-            </div>
-        </div>
-    </section>
-
-    <!-- ======================== FLANKING ======================== -->
-    <section class="section section-dark" id="flanking">
-        <div class="container">
-            <p class="section-label">Reposition Behaviour</p>
-            <h2 class="section-title">Unpredictable Flanking</h2>
-            <p class="section-desc">Instead of always moving directly toward the player, SCP-173 occasionally repositions to flanking angles. This prevents players from easily predicting its position and creates more tense encounters where it can appear from unexpected directions.</p>
-
-            <div class="video-showcase">
-                <div class="video-card">
-                    <div class="video-wrapper">
-                        <video controls preload="metadata">
-                            <source src="Clip6.mp4" type="video/mp4">
-                        </video>
-                    </div>
-                    <div class="video-info">
-                        <h3>Clip 6 &mdash; Flanking Behaviour</h3>
-                        <p>Repeatedly looking away and back shows SCP-173 arriving from different angles rather than always dead-ahead. The flanking chance is set to 50% for this demonstration, with a max flank angle of 60 degrees, creating clearly visible lateral repositioning.</p>
-                        <p class="note">FlankChance set to 0.5 for demonstration.</p>
-                    </div>
-                </div>
-            </div>
-
-            <div class="how-it-works">
-                <h3 class="subsection-title">How Flanking Works</h3>
-                <div class="step-grid">
-                    <div class="step">
-                        <div class="step-num">1</div>
-                        <p><strong>BTService_FlankDecision</strong> rolls a random value each service tick. If it falls below <span class="mono">FlankChance</span>, flanking is activated.</p>
-                    </div>
-                    <div class="step">
-                        <div class="step-num">2</div>
-                        <p>The service computes a flank target by rotating the player-to-SCP173 direction vector by a random angle between <span class="mono">-MaxFlankAngle</span> and <span class="mono">+MaxFlankAngle</span> degrees.</p>
-                    </div>
-                    <div class="step">
-                        <div class="step-num">3</div>
-                        <p>The computed position is written to the <span class="mono">FlankTarget</span> Blackboard key and <span class="mono">bShouldFlank</span> is set to true.</p>
-                    </div>
-                    <div class="step">
-                        <div class="step-num">4</div>
-                        <p><strong>BTTask_MoveToFlankPosition</strong> calls <span class="mono">MoveToLocation(FlankTarget)</span> using NavMesh pathfinding. If the flank target is invalid, it gracefully falls back to <span class="mono">MoveToActor(Player)</span>.</p>
-                    </div>
-                </div>
-            </div>
-
-            <div class="config-table-wrap">
-                <h3 class="subsection-title">Configurable Parameters</h3>
-                <table class="config-table">
-                    <thead>
-                        <tr><th>Parameter</th><th>Location</th><th>Default</th><th>Range</th><th>Purpose</th></tr>
-                    </thead>
-                    <tbody>
-                        <tr><td><span class="mono">FlankChance</span></td><td>SCP173Character</td><td>0.3 (30%)</td><td>0 &ndash; 1</td><td>Probability of choosing a flanking path instead of direct approach.</td></tr>
-                        <tr><td><span class="mono">MaxFlankAngle</span></td><td>SCP173Character</td><td>60&deg;</td><td>0 &ndash; 180</td><td>Maximum angle offset for the flanking reposition.</td></tr>
-                        <tr><td><span class="mono">AcceptanceRadius</span></td><td>BTTask_MoveToFlankPosition</td><td>100 cm</td><td>10 &ndash; 500</td><td>How close SCP-173 must reach the flank target before the task completes.</td></tr>
                     </tbody>
                 </table>
             </div>
